@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <title>5-Min Workout</title>
+  <link rel="manifest" href="data:application/json,{}" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #16213e;
+      padding: 16px 20px;
+      text-align: center;
+      border-bottom: 2px solid #0f3460;
+    }
+    header h1 { font-size: 1.4rem; letter-spacing: 1px; color: #e94560; }
+    header p { font-size: 0.75rem; color: #888; margin-top: 2px; }
+
+    nav {
+      display: flex;
+      background: #16213e;
+    }
+    nav button {
+      flex: 1;
+      padding: 12px;
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    nav button.active {
+      color: #e94560;
+      border-bottom-color: #e94560;
+    }
+
+    .screen { display: none; flex: 1; padding: 20px; flex-direction: column; }
+    .screen.active { display: flex; }
+
+    /* ── WORKOUT SCREEN ── */
+    .workout-idle { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+
+    .exercise-count {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 14px 20px;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .exercise-count span { color: #888; font-size: 0.85rem; }
+    .exercise-count strong { color: #e94560; font-size: 1.1rem; }
+
+    .btn-primary {
+      background: #e94560;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 16px 40px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 20px rgba(233,69,96,0.4);
+      transition: transform 0.1s, box-shadow 0.1s;
+      width: 100%;
+      max-width: 300px;
+    }
+    .btn-primary:active { transform: scale(0.97); box-shadow: none; }
+
+    .btn-secondary {
+      background: #0f3460;
+      color: #ccc;
+      border: none;
+      border-radius: 50px;
+      padding: 12px 30px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    /* Active workout */
+    .workout-active { display: none; flex-direction: column; align-items: center; gap: 16px; }
+
+    .progress-bar-wrap {
+      width: 100%;
+      height: 6px;
+      background: #0f3460;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: #e94560;
+      transition: width 1s linear;
+    }
+
+    .exercise-card {
+      background: #16213e;
+      border-radius: 16px;
+      padding: 30px 20px;
+      text-align: center;
+      width: 100%;
+      border: 2px solid #0f3460;
+    }
+    .exercise-label { font-size: 0.75rem; color: #888; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+    .exercise-name { font-size: 2rem; font-weight: 800; color: #fff; margin-bottom: 6px; }
+    .exercise-reps { font-size: 1.2rem; color: #e94560; font-weight: 700; }
+
+    .timer-ring {
+      position: relative;
+      width: 160px;
+      height: 160px;
+    }
+    .timer-ring svg { transform: rotate(-90deg); }
+    .timer-ring circle {
+      fill: none;
+      stroke-width: 10;
+    }
+    .timer-ring .bg { stroke: #0f3460; }
+    .timer-ring .fg { stroke: #e94560; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+    .timer-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .timer-seconds { font-size: 2.5rem; font-weight: 800; color: #fff; line-height: 1; }
+    .timer-label { font-size: 0.7rem; color: #888; letter-spacing: 1px; }
+
+    .next-up {
+      font-size: 0.8rem;
+      color: #888;
+      text-align: center;
+    }
+    .next-up span { color: #ccc; }
+
+    .workout-controls { display: flex; gap: 12px; width: 100%; }
+    .btn-control {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-pause { background: #0f3460; color: #ccc; }
+    .btn-stop  { background: #2a0a0a; color: #e94560; }
+
+    /* Done screen */
+    .workout-done {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      text-align: center;
+    }
+    .done-emoji { font-size: 4rem; }
+    .done-title { font-size: 1.8rem; font-weight: 800; color: #e94560; }
+    .done-sub { color: #888; font-size: 0.9rem; }
+
+    .done-list {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 16px;
+      width: 100%;
+      text-align: left;
+    }
+    .done-list h3 { font-size: 0.75rem; color: #888; letter-spacing: 2px; margin-bottom: 10px; }
+    .done-list li { list-style: none; padding: 6px 0; border-bottom: 1px solid #0f3460; font-size: 0.9rem; }
+    .done-list li:last-child { border-bottom: none; }
+    .done-list .check { color: #e94560; margin-right: 8px; }
+
+    /* ── EXERCISES SCREEN ── */
+    .exercises-screen { gap: 16px; }
+
+    .add-exercise {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .add-exercise h3 { font-size: 0.8rem; color: #888; letter-spacing: 2px; text-transform: uppercase; }
+    .input-row { display: flex; gap: 8px; }
+    .input-row input {
+      background: #0f3460;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .input-row input:first-child { flex: 2; }
+    .input-row input:last-child { flex: 1; }
+    .btn-add {
+      background: #e94560;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .exercise-list { display: flex; flex-direction: column; gap: 8px; flex: 1; overflow-y: auto; }
+
+    .exercise-item {
+      background: #16213e;
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .exercise-item .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #e94560;
+      flex-shrink: 0;
+    }
+    .exercise-item .info { flex: 1; }
+    .exercise-item .info .name { font-size: 0.95rem; font-weight: 600; }
+    .exercise-item .info .reps { font-size: 0.75rem; color: #888; }
+    .exercise-item .del {
+      background: none;
+      border: none;
+      color: #444;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    .exercise-item .del:hover { color: #e94560; }
+
+    .empty-state { text-align: center; color: #555; padding: 40px 20px; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ 5-MIN WORKOUT</h1>
+  <p>Random daily exercise generator</p>
+</header>
+
+<nav>
+  <button class="active" onclick="showScreen('workout')">Workout</button>
+  <button onclick="showScreen('exercises')">Exercises</button>
+</nav>
+
+<!-- WORKOUT SCREEN -->
+<div id="screen-workout" class="screen active">
+
+  <!-- Idle state -->
+  <div class="workout-idle" id="state-idle">
+    <div style="height:20px"></div>
+    <div class="exercise-count">
+      <span>Exercises in pool</span>
+      <strong id="pool-count">0</strong>
+    </div>
+    <div style="text-align:center; color:#888; font-size:0.85rem; line-height:1.6">
+      Each session picks exercises randomly<br>and splits 5 minutes between them.
+    </div>
+    <button class="btn-primary" onclick="startWorkout()">GENERATE &amp; START</button>
+    <button class="btn-secondary" onclick="showScreen('exercises')">Edit Exercise List</button>
+  </div>
+
+  <!-- Active state -->
+  <div class="workout-active" id="state-active">
+    <div class="progress-bar-wrap" style="width:100%">
+      <div class="progress-bar-fill" id="total-progress" style="width:100%"></div>
+    </div>
+
+    <div class="exercise-card">
+      <div class="exercise-label">Now doing</div>
+      <div class="exercise-name" id="current-name">Pushups</div>
+      <div class="exercise-reps" id="current-reps">20 reps</div>
+    </div>
+
+    <div class="timer-ring">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <circle class="bg" cx="80" cy="80" r="70"/>
+        <circle class="fg" id="timer-arc" cx="80" cy="80" r="70"
+          stroke-dasharray="439.8"
+          stroke-dashoffset="0"/>
+      </svg>
+      <div class="timer-text">
+        <div class="timer-seconds" id="timer-display">0:00</div>
+        <div class="timer-label">this exercise</div>
+      </div>
+    </div>
+
+    <div class="next-up" id="next-up-text">Next: —</div>
+
+    <div class="workout-controls">
+      <button class="btn-control btn-pause" id="btn-pause" onclick="togglePause()">⏸ Pause</button>
+      <button class="btn-control btn-stop" onclick="stopWorkout()">✕ Stop</button>
+    </div>
+  </div>
+
+  <!-- Done state -->
+  <div class="workout-done" id="state-done">
+    <div style="height:20px"></div>
+    <div class="done-emoji">🔥</div>
+    <div class="done-title">Crushed it!</div>
+    <div class="done-sub">5 minutes done. You showed up.</div>
+    <div class="done-list">
+      <h3>Today's Workout</h3>
+      <ul id="done-list-items"></ul>
+    </div>
+    <button class="btn-primary" onclick="resetWorkout()">Do Another Round</button>
+  </div>
+</div>
+
+<!-- EXERCISES SCREEN -->
+<div id="screen-exercises" class="screen exercises-screen">
+  <div class="add-exercise">
+    <h3>Add Exercise</h3>
+    <div class="input-row">
+      <input type="text" id="input-name" placeholder="Exercise name" />
+      <input type="text" id="input-reps" placeholder="e.g. 20 reps" />
+    </div>
+    <button class="btn-add" onclick="addExercise()">+ Add</button>
+  </div>
+
+  <div class="exercise-list" id="exercise-list"></div>
+</div>
+
+<script>
+  // ── DEFAULT EXERCISE LIST ──
+  const DEFAULT_EXERCISES = [
+    { name: "Pushups",           reps: "20 reps" },
+    { name: "Mountain Climbers", reps: "30 reps" },
+    { name: "Squats",            reps: "25 reps" },
+    { name: "Burpees",           reps: "10 reps" },
+    { name: "Jumping Jacks",     reps: "40 reps" },
+    { name: "Plank Hold",        reps: "30 seconds" },
+    { name: "High Knees",        reps: "30 reps" },
+    { name: "Lunges",            reps: "20 reps" },
+    { name: "Tricep Dips",       reps: "15 reps" },
+    { name: "Crunches",          reps: "25 reps" },
+    { name: "Jump Squats",       reps: "15 reps" },
+    { name: "Side Plank",        reps: "20 seconds each" },
+    { name: "Glute Bridges",     reps: "20 reps" },
+    { name: "Superman Hold",     reps: "10 reps" },
+    { name: "Wall Sit",          reps: "30 seconds" },
+  ];
+
+  // ── STATE ──
+  let exercises = JSON.parse(localStorage.getItem('exercises') || 'null') || DEFAULT_EXERCISES;
+  let workout = [];
+  let currentIdx = 0;
+  let timeLeft = 0;
+  let totalTime = 0;
+  let elapsed = 0;
+  let timer = null;
+  let paused = false;
+  const TOTAL_SECONDS = 300; // 5 minutes
+
+  function save() {
+    localStorage.setItem('exercises', JSON.stringify(exercises));
+  }
+
+  // ── NAVIGATION ──
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('screen-' + id).classList.add('active');
+    document.querySelector(`nav button[onclick="showScreen('${id}')"]`).classList.add('active');
+    if (id === 'workout') updatePoolCount();
+    if (id === 'exercises') renderExerciseList();
+  }
+
+  // ── WORKOUT ──
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function updatePoolCount() {
+    document.getElementById('pool-count').textContent = exercises.length;
+  }
+
+  function startWorkout() {
+    if (exercises.length === 0) {
+      alert('Add some exercises first!');
+      showScreen('exercises');
+      return;
+    }
+
+    // Pick 5-8 random exercises
+    const count = Math.min(exercises.length, Math.floor(Math.random() * 4) + 5);
+    workout = shuffle(exercises).slice(0, count);
+
+    // Distribute 300s equally
+    const perExercise = Math.floor(TOTAL_SECONDS / workout.length);
+    workout = workout.map(e => ({ ...e, duration: perExercise }));
+    // Give remainder to last
+    workout[workout.length - 1].duration += TOTAL_SECONDS - perExercise * workout.length;
+
+    currentIdx = 0;
+    elapsed = 0;
+    paused = false;
+
+    setState('active');
+    loadExercise(currentIdx);
+    startTimer();
+  }
+
+  function loadExercise(idx) {
+    const ex = workout[idx];
+    document.getElementById('current-name').textContent = ex.name;
+    document.getElementById('current-reps').textContent = ex.reps;
+    timeLeft = ex.duration;
+    totalTime = ex.duration;
+    updateTimerDisplay();
+    updateArc(1);
+
+    const next = workout[idx + 1];
+    document.getElementById('next-up-text').textContent = next
+      ? `Next: ${next.name} — ${next.reps}`
+      : 'Next: Last exercise! 💪';
+  }
+
+  function startTimer() {
+    clearInterval(timer);
+    timer = setInterval(() => {
+      if (paused) return;
+      timeLeft--;
+      elapsed++;
+      updateTimerDisplay();
+      updateArc(timeLeft / totalTime);
+      updateTotalProgress();
+
+      if (timeLeft <= 0) {
+        currentIdx++;
+        if (currentIdx >= workout.length) {
+          finishWorkout();
+        } else {
+          loadExercise(currentIdx);
+        }
+      }
+    }, 1000);
+  }
+
+  function updateTimerDisplay() {
+    const m = Math.floor(timeLeft / 60);
+    const s = timeLeft % 60;
+    document.getElementById('timer-display').textContent = `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function updateArc(fraction) {
+    const circumference = 439.8;
+    const offset = circumference * (1 - fraction);
+    document.getElementById('timer-arc').style.strokeDashoffset = offset;
+  }
+
+  function updateTotalProgress() {
+    const pct = ((TOTAL_SECONDS - elapsed) / TOTAL_SECONDS) * 100;
+    document.getElementById('total-progress').style.width = Math.max(0, pct) + '%';
+  }
+
+  function togglePause() {
+    paused = !paused;
+    document.getElementById('btn-pause').textContent = paused ? '▶ Resume' : '⏸ Pause';
+  }
+
+  function stopWorkout() {
+    if (confirm('Stop this workout?')) {
+      clearInterval(timer);
+      resetWorkout();
+    }
+  }
+
+  function finishWorkout() {
+    clearInterval(timer);
+    // Build done list
+    const ul = document.getElementById('done-list-items');
+    ul.innerHTML = workout.map(e =>
+      `<li><span class="check">✓</span>${e.name} <span style="color:#888;font-size:0.8rem">${e.reps}</span></li>`
+    ).join('');
+    setState('done');
+  }
+
+  function resetWorkout() {
+    clearInterval(timer);
+    workout = [];
+    elapsed = 0;
+    document.getElementById('total-progress').style.width = '100%';
+    updatePoolCount();
+    setState('idle');
+  }
+
+  function setState(s) {
+    document.getElementById('state-idle').style.display   = s === 'idle'   ? 'flex' : 'none';
+    document.getElementById('state-active').style.display = s === 'active' ? 'flex' : 'none';
+    document.getElementById('state-done').style.display   = s === 'done'   ? 'flex' : 'none';
+  }
+
+  // ── EXERCISE LIST ──
+  function renderExerciseList() {
+    const list = document.getElementById('exercise-list');
+    if (exercises.length === 0) {
+      list.innerHTML = '<div class="empty-state">No exercises yet. Add some above!</div>';
+      return;
+    }
+    list.innerHTML = exercises.map((e, i) => `
+      <div class="exercise-item">
+        <div class="dot"></div>
+        <div class="info">
+          <div class="name">${e.name}</div>
+          <div class="reps">${e.reps}</div>
+        </div>
+        <button class="del" onclick="deleteExercise(${i})">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function addExercise() {
+    const name = document.getElementById('input-name').value.trim();
+    const reps = document.getElementById('input-reps').value.trim();
+    if (!name || !reps) { alert('Enter both a name and reps/duration'); return; }
+    exercises.push({ name, reps });
+    save();
+    document.getElementById('input-name').value = '';
+    document.getElementById('input-reps').value = '';
+    renderExerciseList();
+  }
+
+  function deleteExercise(i) {
+    exercises.splice(i, 1);
+    save();
+    renderExerciseList();
+  }
+
+  // ── INIT ──
+  updatePoolCount();
+  setState('idle');
+</script>
+</body>
+</html>
